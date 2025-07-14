@@ -1,12 +1,14 @@
 import { Router } from 'express';
-import { testConnection, addTestData } from '../controllers/testController';
 
 const router = Router();
 
-// Test database connection
-router.get('/test-db', testConnection);
-
-// Add test data
-router.post('/test-data', addTestData);
+// Test endpoint to verify backend is working
+router.get('/test-data', (req, res) => {
+    res.json({ 
+        success: true, 
+        message: 'Backend is working!',
+        timestamp: new Date().toISOString()
+    });
+});
 
 export default router;

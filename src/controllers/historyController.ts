@@ -1,9 +1,9 @@
 import { Request, Response } from 'express';
 import { AppDataSource } from '../config/database';
-import { History } from '../models/History';
+import { RequestHistory } from '../entities/RequestHistory';
 import { makeRequest } from '../utils/apiClient';
 
-const historyRepository = AppDataSource.getRepository(History);
+const historyRepository = AppDataSource.getRepository(RequestHistory);
 
 // Save API request to history
 export const createHistory = async (req: Request, res: Response) => {
@@ -26,29 +26,30 @@ export const createHistory = async (req: Request, res: Response) => {
         const responseTime = Date.now() - startTime;
 
         // Create and save history
-        const history = new History({
-            method,
-            url,
-            requestHeaders: headers || null,
-            requestBody: body ? JSON.stringify(body) : null,
-            statusCode: response.status || null,
-            responseHeaders: response.headers || null,
-            responseBody: response.data ? JSON.stringify(response.data) : null,
-            responseTime,
-        });
-
-        const savedHistory = await history.save();
+        const history = new RequestHistory();
+        history.method = method as any; // Cast to HttpMethod
+        history.url = url;
         
-        // Return both the API response and history ID
+        // Set current date and time
+        const now = new Date();
+        history.month = String(now.getMonth() + 1).padStart(2, '0');
+        history.day = String(now.getDate()).padStart(2, '0');
+        history.year = String(now.getFullYear());
+        history.time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+        await historyRepository.save(history);
+
         res.status(201).json({
-            ...response,
-            historyId: savedHistory.id,
+            data: response.data,
+            status: response.status,
+            headers: response.headers,
             responseTime: `${responseTime}ms`,
+            historyId: history.id
         });
     } catch (error) {
-        console.error('Error in createHistory:', error);
+        console.error('Error creating history:', error);
         res.status(500).json({ 
-            message: 'Error making API request', 
+            message: 'Failed to process request', 
             error: error instanceof Error ? error.message : 'Unknown error' 
         });
     }
@@ -59,23 +60,25 @@ export const getHistory = async (req: Request, res: Response) => {
     try {
         const { limit = 50, offset = 0 } = req.query;
         
-        const query = historyRepository
-            .createQueryBuilder('history')
-            .select([
-                'history.id',
-                'history.method',
-                'history.url',
-                'history.statusCode',
-                'history.responseTime',
-                'history.createdAt'
-            ])
-            .orderBy('history.createdAt', 'DESC')
-            .take(Number(limit))
-            .skip(Number(offset));
-
-        const [items, count] = await query.getManyAndCount();
+        const [items, count] = await historyRepository.findAndCount({
+            order: { created_at: 'DESC' },
+            take: Number(limit),
+            skip: Number(offset)
+        });
         
-        res.json({ items, count });
+        res.json({ 
+            items: items.map(item => ({
+                id: item.id,
+                method: item.method,
+                url: item.url,
+                month: item.month,
+                day: item.day,
+                year: item.year,
+                time: item.time,
+                createdAt: item.created_at
+            })), 
+            count 
+        });
     } catch (error) {
         console.error('Error in getHistory:', error);
         res.status(500).json({ 
@@ -93,16 +96,16 @@ export const getHistoryById = async (req: Request, res: Response) => {
         });
         
         if (history) {
-            // Parse the JSON fields
-            const response = {
-                ...history,
-                requestHeaders: history.requestHeaders ? JSON.parse(history.requestHeaders as any) : null,
-                responseHeaders: history.responseHeaders ? JSON.parse(history.responseHeaders as any) : null,
-                requestBody: history.requestBody ? JSON.parse(history.requestBody) : null,
-                responseBody: history.responseBody ? JSON.parse(history.responseBody) : null,
-            };
-            
-            res.json(response);
+            res.json({
+                id: history.id,
+                method: history.method,
+                url: history.url,
+                month: history.month,
+                day: history.day,
+                year: history.year,
+                time: history.time,
+                createdAt: history.created_at
+            });
         } else {
             res.status(404).json({ message: 'History not found' });
         }
