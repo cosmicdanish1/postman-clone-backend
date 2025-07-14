@@ -41,6 +41,20 @@ app.get('/test-endpoint', (req, res) => {
     res.json({ status: 'ok', message: 'Backend is working!' });
 });
 
+// Echo endpoint for testing
+app.post('/api/echo', (req, res) => {
+    console.log('Echo endpoint hit!');
+    console.log('Headers:', req.headers);
+    console.log('Body:', req.body);
+    res.json({
+        status: 'ok',
+        method: req.method,
+        url: req.originalUrl,
+        headers: req.headers,
+        body: req.body
+    });
+});
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });

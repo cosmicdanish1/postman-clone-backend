@@ -6,19 +6,29 @@ import { AppDataSource, dbConnection } from './config/database';
 // Load environment variables
 dotenv.config();
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 5000;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
 // Start the server
 const startServer = async () => {
     try {
+        console.log('Starting server...');
+        console.log('Environment:', NODE_ENV);
+        console.log('Port:', PORT);
+        
         // Initialize database connection
+        console.log('Initializing database connection...');
         await dbConnection;
+        console.log('Database connected successfully');
         
         // Start the Express server
-        const server = app.listen(PORT, () => {
+        const server = app.listen(PORT, '0.0.0.0', () => {
             console.log(`\n🚀 Server running in ${NODE_ENV} mode on port ${PORT}`);
             console.log(`📚 API Documentation: http://localhost:${PORT}/api-docs`);
+            console.log('Available endpoints:');
+            console.log(`- GET    http://localhost:${PORT}/api/health`);
+            console.log(`- POST   http://localhost:${PORT}/api/history`);
+            console.log(`- GET    http://localhost:${PORT}/api/history`);
         });
 
         // Handle graceful shutdown
