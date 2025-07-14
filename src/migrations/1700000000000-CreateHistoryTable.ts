@@ -4,7 +4,7 @@ export class CreateHistoryTable1700000000000 implements MigrationInterface {
     public async up(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.createTable(
             new Table({
-                name: 'history',
+                name: 'request_history',
                 columns: [
                     {
                         name: 'id',
