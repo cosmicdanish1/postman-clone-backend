@@ -1,6 +1,11 @@
 import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn } from 'typeorm';
 
-type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD' | 'OPTIONS' | 'CONNECT' | 'TRACE';
+export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD' | 'OPTIONS' | 'CONNECT' | 'TRACE';
+
+// Array of valid HTTP methods for validation
+export const HTTP_METHODS: HttpMethod[] = [
+  'GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS', 'CONNECT', 'TRACE'
+];
 
 @Entity('request_history')
 export class RequestHistory {
@@ -9,7 +14,7 @@ export class RequestHistory {
 
     @Column({
         type: 'enum',
-        enum: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS', 'CONNECT', 'TRACE'],
+        enum: HTTP_METHODS,
         default: 'GET'
     })
     method!: HttpMethod;

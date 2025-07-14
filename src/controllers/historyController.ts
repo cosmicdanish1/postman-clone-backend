@@ -1,32 +1,62 @@
 import { Request, Response } from 'express';
 import { AppDataSource } from '../config/database';
-import { RequestHistory } from '../entities/RequestHistory';
+import { RequestHistory, HTTP_METHODS } from '../entities/RequestHistory';
 import { makeRequest } from '../utils/apiClient';
 
 const historyRepository = AppDataSource.getRepository(RequestHistory);
 
 // Save API request to history
 export const createHistory = async (req: Request, res: Response) => {
-    console.log('=== createHistory endpoint hit ===');
-    console.log('Request body:', JSON.stringify(req.body, null, 2));
+    const requestId = Math.random().toString(36).substring(2, 9);
+    const timestamp = new Date().toISOString();
+    
+    console.log('\n=== BACKEND: Incoming Request ===');
+    console.log(`[${timestamp}] Request ID: ${requestId}`);
+    console.log(`[${timestamp}] ${req.method} ${req.originalUrl}`);
+    
+    // Log request details
+    console.log('\n=== Request Headers ===');
+    console.log(JSON.stringify(req.headers, null, 2));
+    
+    console.log('\n=== Request Body ===');
+    console.log(req.body);
+    
+    console.log('\n=== Request Details ===');
+    console.log('Content-Type:', req.get('Content-Type'));
+    console.log('Content-Length:', req.get('Content-Length') || '0');
     
     try {
-        const { method, url, headers, body } = req.body;
+        const { method, url, month, day, year, time } = req.body;
         
+        console.log('Extracted data:', { method, url, month, day, year, time });
+        
+        // Validate required fields
         if (!method || !url) {
-            const errorMsg = 'Method and URL are required';
+            const errorMsg = `Missing required fields. Method: ${method}, URL: ${url}`;
             console.error('Validation error:', errorMsg);
             return res.status(400).json({ 
                 success: false,
-                message: errorMsg 
+                message: 'Method and URL are required',
+                received: { method, url },
+                fullBody: req.body
+            });
+        }
+        
+        // Validate HTTP method
+        if (!HTTP_METHODS.includes(method.toUpperCase() as any)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid HTTP method',
+                received: method,
+                validMethods: HTTP_METHODS
             });
         }
 
-        console.log('Creating history entry with method:', method, 'and URL:', url);
+        console.log('Creating history entry with:', { method, url });
 
         // Create and save history
         const history = new RequestHistory();
-        history.method = method as any; // Cast to HttpMethod
+        history.method = method; // TypeScript will handle the type checking
         history.url = url;
         
         // Set current date and time
@@ -37,13 +67,14 @@ export const createHistory = async (req: Request, res: Response) => {
         history.time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
         history.created_at = now;
 
-        console.log('Saving history entry to database:', JSON.stringify(history, null, 2));
+        console.log('Prepared history entry:', JSON.stringify(history, null, 2));
         
         try {
+            console.log('Attempting to save to database...');
             const savedHistory = await historyRepository.save(history);
-            console.log('History saved successfully with ID:', savedHistory.id);
+            console.log('✅ History saved successfully. ID:', savedHistory.id);
             
-            res.status(201).json({
+            const responseData = {
                 success: true,
                 message: 'Request saved to history',
                 historyId: savedHistory.id,
@@ -51,23 +82,45 @@ export const createHistory = async (req: Request, res: Response) => {
                     method: savedHistory.method,
                     url: savedHistory.url,
                     date: `${savedHistory.year}-${savedHistory.month}-${savedHistory.day}`,
-                    time: savedHistory.time
+                    time: savedHistory.time,
+                    createdAt: savedHistory.created_at
                 }
+            };
+            
+            console.log('Sending response:', JSON.stringify(responseData, null, 2));
+            return res.status(201).json(responseData);
+            
+        } catch (dbError: any) {
+            console.error('❌ Database save error:', {
+                name: dbError.name,
+                message: dbError.message,
+                code: dbError.code,
+                sql: dbError.sql,
+                stack: dbError.stack
             });
-        } catch (error: any) {
-            console.error('Database save error:', error);
-            if (error.code === 'ER_NO_SUCH_TABLE') {
-                console.error('Database table does not exist. Please run migrations.');
+            
+            if (dbError.code === 'ER_NO_SUCH_TABLE') {
+                console.error('❌ Database table does not exist. Please run migrations.');
             }
-            throw error;
+            
+            throw dbError;
         }
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        console.error('Error in createHistory:', error);
+        console.error('❌ Error in createHistory:', {
+            error: errorMessage,
+            stack: error instanceof Error ? error.stack : 'No stack trace',
+            requestBody: req.body
+        });
+        
         res.status(500).json({ 
             success: false,
             message: 'Failed to save request to history',
-            error: errorMessage 
+            error: errorMessage,
+            requestData: {
+                body: req.body,
+                headers: req.headers
+            }
         });
     }
 };

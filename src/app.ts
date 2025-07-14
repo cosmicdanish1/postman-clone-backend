@@ -6,14 +6,40 @@ import { AppDataSource } from './config/database';
 
 const app = express();
 
-// Middleware
+// Enable CORS
 app.use(cors({
-    origin: 'http://localhost:5173', // Your frontend is running on port 5173
+    origin: 'http://localhost:5173', // Your frontend URL
+    credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true
+    allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+// Log all incoming requests
+app.use((req, res, next) => {
+    console.log(`\n=== INCOMING REQUEST ===`);
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
+    console.log('Origin:', req.headers.origin);
+    console.log('Headers:', JSON.stringify(req.headers, null, 2));
+    next();
+});
+
+// Parse JSON bodies (only once)
 app.use(express.json());
+
+// Log request body for POST/PUT requests
+app.use((req, res, next) => {
+    if (['POST', 'PUT'].includes(req.method)) {
+        console.log('Request Body:', req.body);
+        console.log('Content-Type:', req.get('Content-Type'));
+    }
+    next();
+});
+
+// Test endpoint
+app.get('/test-endpoint', (req, res) => {
+    console.log('Test endpoint hit!');
+    res.json({ status: 'ok', message: 'Backend is working!' });
+});
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
