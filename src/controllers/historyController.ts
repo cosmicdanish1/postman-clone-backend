@@ -256,11 +256,25 @@ export const deleteHistory = async (req: Request, res: Response) => {
 // Clear all history
 export const clearHistory = async (req: Request, res: Response) => {
     try {
-        await historyRepository.clear();
-        res.status(204).send();
+        // Use delete with a condition that matches all records
+        const result = await historyRepository
+            .createQueryBuilder()
+            .delete()
+            .from(RequestHistory)
+            .execute();
+            
+        console.log('Cleared history. Rows affected:', result.affected);
+        
+        // Return success response
+        res.status(200).json({ 
+            success: true,
+            message: 'History cleared successfully',
+            count: result.affected || 0
+        });
     } catch (error) {
         console.error('Error in clearHistory:', error);
         res.status(500).json({ 
+            success: false,
             message: 'Error clearing history', 
             error: error instanceof Error ? error.message : 'Unknown error' 
         });

@@ -18,6 +18,9 @@ router.get('/:id', historyController.getHistoryById);
 // Test endpoint
 router.get('/test', historyController.testEndpoint);
 
+// Clear all history
+router.delete('/', historyController.clearHistory);
+
 // Delete a history entry
 router.delete('/:id', historyController.deleteHistory);
 
