@@ -36,4 +36,7 @@ export class RequestHistory {
 
     @CreateDateColumn({ type: 'timestamp' })
     created_at!: Date;
+
+    @Column({ type: 'boolean', default: false })
+    is_favorite!: boolean;
 }

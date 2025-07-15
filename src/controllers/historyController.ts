@@ -238,47 +238,104 @@ export const getHistoryById = async (req: Request, res: Response) => {
 
 // Delete a history entry
 export const deleteHistory = async (req: Request, res: Response) => {
-    try {
-        const result = await historyRepository.delete(Number(req.params.id));
-        if (result.affected === 0) {
-            return res.status(404).json({ message: 'History not found' });
-        }
-        res.status(204).send();
-    } catch (error) {
-        console.error('Error in deleteHistory:', error);
-        res.status(500).json({ 
-            message: 'Error deleting history', 
-            error: error instanceof Error ? error.message : 'Unknown error' 
-        });
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid request ID'
+      });
     }
+
+    const result = await historyRepository
+      .createQueryBuilder()
+      .delete()
+      .from(RequestHistory)
+      .where('id = :id', { id })
+      .execute();
+
+    if (result.affected === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'History item not found'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'History item deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error in deleteHistory:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error deleting history item',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
 };
 
 // Clear all history
 export const clearHistory = async (req: Request, res: Response) => {
-    try {
-        // Use delete with a condition that matches all records
-        const result = await historyRepository
-            .createQueryBuilder()
-            .delete()
-            .from(RequestHistory)
-            .execute();
-            
-        console.log('Cleared history. Rows affected:', result.affected);
-        
-        // Return success response
-        res.status(200).json({ 
-            success: true,
-            message: 'History cleared successfully',
-            count: result.affected || 0
-        });
-    } catch (error) {
-        console.error('Error in clearHistory:', error);
-        res.status(500).json({ 
-            success: false,
-            message: 'Error clearing history', 
-            error: error instanceof Error ? error.message : 'Unknown error' 
-        });
+  try {
+    const result = await historyRepository
+      .createQueryBuilder()
+      .delete()
+      .from(RequestHistory)
+      .execute();
+      
+    console.log('Cleared history. Rows affected:', result.affected);
+    
+    // Return success response
+    res.status(200).json({ 
+      success: true,
+      message: 'History cleared successfully',
+      count: result.affected || 0
+    });
+  } catch (error) {
+    console.error('Error in clearHistory:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Error clearing history', 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    });
+  }
+};
+
+export const toggleFavorite = async (req: Request, res: Response) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid request ID'
+      });
     }
+
+    const historyItem = await historyRepository.findOne({ where: { id } });
+    if (!historyItem) {
+      return res.status(404).json({
+        success: false,
+        message: 'History item not found'
+      });
+    }
+
+    historyItem.is_favorite = !historyItem.is_favorite;
+    await historyRepository.save(historyItem);
+
+    res.status(200).json({
+      success: true,
+      message: 'Favorite status updated successfully',
+      is_favorite: historyItem.is_favorite
+    });
+  } catch (error) {
+    console.error('Error in toggleFavorite:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating favorite status',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
 };
 
 // Execute an API request without saving to history
