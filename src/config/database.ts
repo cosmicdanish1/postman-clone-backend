@@ -1,6 +1,7 @@
 import { DataSource } from 'typeorm';
 import 'dotenv/config';
 import { RequestHistory } from '../entities/RequestHistory';
+import { GraphQLEndpointHistory } from '../entities/GraphQLEndpointHistory';
 
 // Validate required environment variables
 const requiredEnvVars = ['DB_HOST', 'DB_USER', 'DB_PASSWORD', 'DB_NAME'];
@@ -21,7 +22,7 @@ const AppDataSource = new DataSource({
     database: process.env.DB_NAME,
     synchronize: true, // Set to false in production
     logging: process.env.NODE_ENV === 'development',
-    entities: [RequestHistory],
+    entities: [RequestHistory, GraphQLEndpointHistory],
     migrations: [],
     subscribers: [],
     charset: 'utf8mb4',

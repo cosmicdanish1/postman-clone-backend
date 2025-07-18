@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import historyRoutes from './routes/historyRoutes';
+import graphqlEndpointHistoryRoutes from './routes/graphqlEndpointHistoryRoutes';
 import testRoutes from './routes/testRoutes';
 import { AppDataSource } from './config/database';
 
@@ -62,6 +63,7 @@ app.get('/api/health', (req, res) => {
 
 // API Routes
 app.use('/api/history', historyRoutes);
+app.use('/api/graphql-endpoints', graphqlEndpointHistoryRoutes);
 app.use('/api/test', testRoutes);
 
 // Error handling middleware
